@@ -47,6 +47,7 @@ export default function AlarmhistoryView() {
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
+  const [anomalyEvents, setAnomalyEvents] = useState<Row[]>([])
   const filterFields = useMemo(() => columns.slice(0, 3), [])
 
   const reload = useCallback(async () => {
@@ -68,6 +69,13 @@ export default function AlarmhistoryView() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  useEffect(() => {
+    request('/api/alarmhistory/anomaly-events')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => setAnomalyEvents(payload?.items ?? []))
+      .catch(() => undefined)
+  }, [])
 
   async function runAction(action: string, row: Row) {
     setErrorMessage('')
@@ -153,6 +161,40 @@ export default function AlarmhistoryView() {
           )}
         </tbody>
       </table>
+
+      <div className="panel">
+        <h3 className="panel-title">来自异常检测的异常事件</h3>
+        <p className="panel-desc">
+          这一区与异常检测页读取同一份事件记录，只做展示，不在告警历史里另存副本；
+          顺着部署版本与训练窗口可以回到产生它的那次训练。
+        </p>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>事件编号</th><th>业务批次</th><th>事件时间</th><th>指标值</th>
+              <th>严重度</th><th>模型版本</th><th>部署版本</th><th>训练窗口开始</th><th>训练窗口结束</th>
+            </tr>
+          </thead>
+          <tbody>
+            {anomalyEvents.map((event) => (
+              <tr key={String(event.id)}>
+                <td>{event["事件编号"]}</td>
+                <td>{event["业务批次"]}</td>
+                <td>{event["事件时间"]}</td>
+                <td>{event["指标值"]}</td>
+                <td>{event["严重度"]}</td>
+                <td>{event["模型版本"]}</td>
+                <td>{event["部署版本"]}</td>
+                <td>{event["训练窗口开始"]}</td>
+                <td>{event["训练窗口结束"]}</td>
+              </tr>
+            ))}
+            {anomalyEvents.length === 0 && (
+              <tr><td className="empty-state" colSpan={9}>还没有异常事件记录，可在异常检测页部署模型后按批次生成</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <footer className="page-foot">
         <span>共 {total} 条告警历史记录</span>

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.anomalydetect import service as anomaly_service
 from app.store import store
 
 app = FastAPI(title="实时指标计算与监控大盘平台", version="1.0.0")
@@ -24,6 +25,10 @@ app.add_middleware(
 
 for module in ROUTERS:
     app.include_router(module.router)
+
+# 示例数据里状态已经是「已部署」的检测模型，启动时补齐训练记录与部署快照，
+# 这样快照区一打开就有可追溯的版本指纹，而不是空表。
+anomaly_service.bootstrap_seed()
 
 
 @app.get("/api/health")

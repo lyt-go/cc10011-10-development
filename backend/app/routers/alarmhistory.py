@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import ActionResult, EntryPayload, PageResult
 from app.services.alarmhistory import AlarmhistoryService
+from app.services.anomalydetect import service as anomaly_service
 
 router = APIRouter(prefix="/api/alarmhistory", tags=["告警历史"])
 
@@ -28,6 +29,19 @@ def list_entries(
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
     items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/anomaly-events")
+def list_anomaly_events(
+    dataset_id: int | None = Query(default=None, description="按异常检测事件数据集过滤"),
+    batch: str | None = Query(default=None, description="按业务批次过滤"),
+    only_anomaly: bool = Query(default=True, description="只看异常事件"),
+) -> dict[str, Any]:
+    """告警历史与异常检测共用同一份异常事件记录，这里只做转发读取。"""
+    items = anomaly_service.query_events(
+        dataset_id=dataset_id, batch=batch, only_anomaly=only_anomaly
+    )
+    return {"items": items, "total": len(items)}
 
 
 @router.get("/{entry_id}", response_model=dict)
